@@ -62,6 +62,20 @@ function [xx, tt] = generateSignal(handles)
     xx = A1*cos(F1*tt + P1) + A2*cos(F2*tt + P2) + A3*cos(F3*tt + P3);
 end
 
+function [f, P2] = transform(data, fsamp)
+    L = size(data,2);
+    
+    Y = fft(data);
+    f = fsamp*(0:L)/L;
+    
+    P2 = abs(Y/L);  
+end
+
+function V = avg_filter(data)
+    detrend(data,0);
+    bk = (1/3) * ones(3, 1);
+    V = filter(bk, 1, data);
+end
 
 % --- Executes just before UserInterface is made visible.
 function UserInterface_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -83,6 +97,14 @@ if strcmp(get(hObject,'Visible'),'off')
     [xx,tt] = generateSignal(handles);
     axes(handles.axes1);
     plot(tt, xx)
+    xlabel('t (sec)')
+    ylabel('Amplitude (Volts)')
+    title('Sinusoidal Waveform')
+    
+    axes(handles.axes2);
+    xlabel('f (Hz)')
+    ylabel('Amplitude (Volts)')
+    title('Frequency Spectrum of Sinusoid')
 end
 
 % UIWAIT makes UserInterface wait for user response (see UIRESUME)
@@ -109,8 +131,20 @@ axes(handles.axes1);
 cla;
 
 [xx, tt] = generateSignal(handles);
-%disp(xx);
-plot(tt, xx)
+plot(tt, avg_filter(xx))
+xlabel('t (sec)')
+ylabel('Amplitude (Volts)')
+title('Sinusoidal Waveform')
+
+axes(handles.axes2);
+cla;
+
+[f, P] = transform(avg_filter(xx), 1000);
+plot(f, P)
+xlabel('f (Hz)')
+ylabel('Amplitude (Volts)')
+title('Frequency Spectrum of Sinusoid')
+
 end
 
 % --------------------------------------------------------------------

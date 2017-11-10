@@ -22,7 +22,7 @@ function varargout = UserInterface(varargin)
 
 % Edit the above text to modify the response to help UserInterface
 
-% Last Modified by GUIDE v2.5 06-Nov-2017 10:03:56
+% Last Modified by GUIDE v2.5 06-Nov-2017 15:31:11
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -44,17 +44,35 @@ end
 % End initialization code - DO NOT EDIT
 end
 
-function xx = generateSignal(handles)
-    t = 0:0.05:2*pi;
+function [xx, tt] = generateSignal(handles)
+    tt = 0:0.005:2*pi;
 
-    A1 = str2double(get(handles.editAmp1, 'Value'));
-    x1 = A1*cos(t);
+    A1 = str2double(get(handles.editAmp1, 'String'));
+    P1 = str2double(get(handles.editPhs1, 'String'));
+    F1 = str2double(get(handles.editFreq1, 'String'));
     
-    xx = x1;
+    A2 = str2double(get(handles.editAmp2, 'String'));
+    P2 = str2double(get(handles.editPhs2, 'String'));
+    F2 = str2double(get(handles.editFreq2, 'String'));
     
-    plot(x1);
+    A3 = str2double(get(handles.editAmp3, 'String'));
+    P3 = str2double(get(handles.editPhs3, 'String'));
+    F3 = str2double(get(handles.editFreq3, 'String'));
+    
+    xx = A1*cos(F1*tt + P1) + A2*cos(F2*tt + P2) + A3*cos(F3*tt + P3);
 end
 
+
+function [f, P1] = transform(data, fsamp)
+    L = size(data,2);
+    
+    Y = fft(data);
+    f = fsamp*(0:(L/2))/L;
+    
+    P2 = abs(Y/L);
+    P1 = P2(1:floor(L/2)+1);
+    P1(2:end-1) = 2*P1(2:end-1);   
+end
 
 % --- Executes just before UserInterface is made visible.
 function UserInterface_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -73,7 +91,9 @@ guidata(hObject, handles);
 % This sets up the initial plot - only do when we are invisible
 % so window can get raised using UserInterface.
 if strcmp(get(hObject,'Visible'),'off')
-    xx = generateSignal(handles);
+    [xx,tt] = generateSignal(handles);
+    axes(handles.axes1);
+    plot(tt, xx)
 end
 
 % UIWAIT makes UserInterface wait for user response (see UIRESUME)
@@ -98,6 +118,14 @@ function btnUpdate_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 axes(handles.axes1);
 cla;
+
+[xx, tt] = generateSignal(handles);
+plot(tt, xx)
+
+axes(handles.axes2);
+[P, f] = transform(xx, 100);
+
+
 end
 
 % --------------------------------------------------------------------
