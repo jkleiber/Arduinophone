@@ -44,31 +44,44 @@ end
 % End initialization code - DO NOT EDIT
 end
 
-function [xx, tt] = generateSignal(handles)
-    tt = 0:0.005:2*pi;
-
-    A1 = str2double(get(handles.editAmp1, 'String'));
-    P1 = str2double(get(handles.editPhs1, 'String'));
-    F1 = str2double(get(handles.editFreq1, 'String'));
-    
-    A2 = str2double(get(handles.editAmp2, 'String'));
-    P2 = str2double(get(handles.editPhs2, 'String'));
-    F2 = str2double(get(handles.editFreq2, 'String'));
-    
-    A3 = str2double(get(handles.editAmp3, 'String'));
-    P3 = str2double(get(handles.editPhs3, 'String'));
-    F3 = str2double(get(handles.editFreq3, 'String'));
-    
-    xx = A1*cos(F1*tt + P1) + A2*cos(F2*tt + P2) + A3*cos(F3*tt + P3);
+function d = deNaN(num)
+    if isnan(num)
+        d = 0;
+    else
+        d = num;
+    end
 end
 
-function [f, P2] = transform(data, fsamp)
-    L = size(data,2);
+function [xx, tt] = generateSignal(handles)
+    tt = 0:0.005:10;
+
+    A1 = deNaN(str2double(get(handles.editAmp1, 'String')));
+    P1 = deNaN(str2double(get(handles.editPhs1, 'String')));
+    F1 = deNaN(str2double(get(handles.editFreq1, 'String')));
     
-    Y = fft(data);
-    f = fsamp*(0:L)/L;
+    A2 = deNaN(str2double(get(handles.editAmp2, 'String')));
+    P2 = deNaN(str2double(get(handles.editPhs2, 'String')));
+    F2 = deNaN(str2double(get(handles.editFreq2, 'String')));
     
-    P2 = abs(Y/L);  
+    A3 = deNaN(str2double(get(handles.editAmp3, 'String')));
+    P3 = deNaN(str2double(get(handles.editPhs3, 'String')));
+    F3 = deNaN(str2double(get(handles.editFreq3, 'String')));
+    
+    xx = A1*cos(2*pi*F1*tt + P1) + A2*cos(2*pi*F2*tt + P2) + A3*cos(2*pi*F3*tt + P3);
+end
+
+function [P, f] = transform(data, fsamp)
+    signal = detrend(data, 0);
+    len = length(signal);
+    
+    nfft = 2^nextpow2(len);
+    
+    P = fft(signal, nfft)/len;
+    
+    f = (fsamp/2) * linspace(0,1,nfft/2+1);
+    
+    %Return single-sided spectrum
+    P = 2 * abs(P(1:nfft/2+1));
 end
 
 function V = avg_filter(data)
@@ -99,12 +112,12 @@ if strcmp(get(hObject,'Visible'),'off')
     plot(tt, xx)
     xlabel('t (sec)')
     ylabel('Amplitude (Volts)')
-    title('Sinusoidal Waveform')
+    title('Sinusoidal Waveform Input V(t)')
     
     axes(handles.axes2);
     xlabel('f (Hz)')
     ylabel('Amplitude (Volts)')
-    title('Frequency Spectrum of Sinusoid')
+    title('Single-Sided Amplitude Spectrum of V(t)')
 end
 
 % UIWAIT makes UserInterface wait for user response (see UIRESUME)
@@ -134,16 +147,16 @@ cla;
 plot(tt, avg_filter(xx))
 xlabel('t (sec)')
 ylabel('Amplitude (Volts)')
-title('Sinusoidal Waveform')
+title('Sinusoidal Waveform Input V(t)')
 
 axes(handles.axes2);
 cla;
 
-[f, P] = transform(avg_filter(xx), 1000);
+[P, f] = transform(avg_filter(xx), 200);
 plot(f, P)
 xlabel('f (Hz)')
 ylabel('Amplitude (Volts)')
-title('Frequency Spectrum of Sinusoid')
+title('Single-Sided Amplitude Spectrum of V(t)')
 
 end
 

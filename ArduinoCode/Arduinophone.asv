@@ -45,7 +45,7 @@ while ishandle(fig)
     end
     
     A = avg_filter(amplifyAndOffset(data));
-    Ftrans = transform(A, samplingFreq);
+    [f, P1] = transform(data, samplingFreq);
     
     set(raw_data, 'XData', time);
     set(raw_data, 'YData', amplifyAndOffset(data));
@@ -53,11 +53,11 @@ while ishandle(fig)
     set(avg_data, 'XData', time);
     set(avg_data, 'YData', A);
     
-    set(freq_domain, 'XData', Ftrans(1));
-    set(freq_domain, 'YData', Ftrans(2));
+    set(freq_domain, 'XData', f);
+    set(freq_domain, 'YData', P1);
     
     subplot(3,1,1);
-    axis([time(minX) time(i) minY maxY]);
+    axis([time(minX) maxX minY maxY]);
     subplot(3,1,2);
     axis([time(minX) time(i) minY maxY]);
     subplot(3,1,3);
@@ -67,7 +67,7 @@ while ishandle(fig)
 end
 
 function A = amplifyAndOffset(data)
-    A = detrend(21*data,0);
+    A = 21 * detrend(data,0);
 end
 
 function V = avg_filter(data)
@@ -82,6 +82,6 @@ function [f, P1] = transform(data, fsamp)
     f = fsamp*(0:(L/2))/L;
     
     P2 = abs(Y/L);
-    P1 = P2(1:L/2)+1);
+    P1 = P2(1:floor(L/2)+1);
     P1(2:end-1) = 2*P1(2:end-1);   
 end

@@ -15,8 +15,10 @@ samplingFreq = 50;
 samplingT = 1 / samplingFreq;
 
 minX = 1;
-minY = -2.5;
-maxY = 2.5;
+maxX = 250; %Maximum number of points on the plot at a time
+maxT = maxX*samplingT; %Max number of seconds on plot at a time
+minY = -2.5; %Minimum offset output voltage from microphone
+maxY = 2.5; %Maximum offset output voltage from microphone
 
 fig = figure(1);
 subplot(3, 1, 1);
@@ -40,8 +42,9 @@ while ishandle(fig)
     data(i) = readVoltage(a, 'A0');
     time(i) = toc;
     
-    if i > 250
-        minX = i - 250;
+    if time(i) > maxT
+        minX = time(i - maxX);
+        maxX = time(i);
     end
     
     A = avg_filter(amplifyAndOffset(data));
@@ -57,9 +60,9 @@ while ishandle(fig)
     set(freq_domain, 'YData', P1);
     
     subplot(3,1,1);
-    axis([time(minX) time(i) minY maxY]);
+    axis([time(minX) maxX minY maxY]);
     subplot(3,1,2);
-    axis([time(minX) time(i) minY maxY]);
+    axis([time(minX) maxX minY maxY]);
     subplot(3,1,3);
     axis([-inf inf 0 1]);
     
