@@ -75,19 +75,24 @@ function [P, f] = transform(data, fsamp)
     len = length(signal);
     
     nfft = 2^nextpow2(len);
-    
-    P = fft(signal, nfft)/len;
-    
     f = (fsamp/2) * linspace(0,1,nfft/2+1);
     
-    %Return single-sided spectrum
-    P = 2 * abs(P(1:nfft/2+1));
+    P = abs(fft(signal, nfft))/len;
+    P = 2 * abs(P(1:nfft/2+1)); %Return single-sided spectrum
 end
 
 function V = avg_filter(data)
     detrend(data,0);
     bk = (1/3) * ones(3, 1);
     V = filter(bk, 1, data);
+end
+
+function [pp, ff] = chooseColor(P, freqs)
+    [pp, ff] = findpeaks(P, freqs, 'SortStr', 'descend');
+    
+    R = 0;
+    G = 0;
+    B = 0;
 end
 
 % --- Executes just before UserInterface is made visible.
@@ -143,8 +148,13 @@ function btnUpdate_Callback(hObject, eventdata, handles)
 axes(handles.axes1);
 cla;
 
+XXX = rand(1, 10*200 + 1);
+
 [xx, tt] = generateSignal(handles);
-plot(tt, avg_filter(xx))
+tt
+%plot(tt, avg_filter(xx))
+plot(tt, avg_filter(XXX))
+
 xlabel('t (sec)')
 ylabel('Amplitude (Volts)')
 title('Sinusoidal Waveform Input V(t)')
@@ -152,11 +162,18 @@ title('Sinusoidal Waveform Input V(t)')
 axes(handles.axes2);
 cla;
 
-[P, f] = transform(avg_filter(xx), 200);
+%[P, f] = transform(avg_filter(xx), 200);
+[P, f] = transform(avg_filter(XXX), 200);
 plot(f, P)
 xlabel('f (Hz)')
 ylabel('Amplitude (Volts)')
 title('Single-Sided Amplitude Spectrum of V(t)')
+
+[ps, fs] = chooseColor(P, f);
+for i=1:3
+    text(fs(i) + 0.2, ps(i), num2str(fs(i)));
+end
+
 
 end
 

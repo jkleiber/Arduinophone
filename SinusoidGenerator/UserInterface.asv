@@ -75,19 +75,22 @@ function [P, f] = transform(data, fsamp)
     len = length(signal);
     
     nfft = 2^nextpow2(len);
-    
-    P = fft(signal, nfft)/len;
-    
     f = (fsamp/2) * linspace(0,1,nfft/2+1);
     
-    %Return single-sided spectrum
-    P = 2 * abs(P(1:nfft/2+1));
+    P = abs(fft(signal, nfft))/len;
+    P = 2 * abs(P(1:nfft/2+1)); %Return single-sided spectrum
 end
 
 function V = avg_filter(data)
     detrend(data,0);
     bk = (1/3) * ones(3, 1);
     V = filter(bk, 1, data);
+end
+
+function [R, G, B] = chooseColor(P, freqs)
+    R = 0;
+    G = 0;
+    
 end
 
 % --- Executes just before UserInterface is made visible.
