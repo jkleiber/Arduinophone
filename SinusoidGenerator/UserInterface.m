@@ -22,7 +22,7 @@ function varargout = UserInterface(varargin)
 
 % Edit the above text to modify the response to help UserInterface
 
-% Last Modified by GUIDE v2.5 06-Nov-2017 15:31:11
+% Last Modified by GUIDE v2.5 17-Nov-2017 10:07:06
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -53,7 +53,7 @@ function d = deNaN(num)
 end
 
 function [xx, tt] = generateSignal(handles)
-    tt = 0:0.005:10;
+    tt = 0:0.001:10;
 
     A1 = deNaN(str2double(get(handles.editAmp1, 'String')));
     P1 = deNaN(str2double(get(handles.editPhs1, 'String')));
@@ -87,12 +87,58 @@ function V = avg_filter(data)
     V = filter(bk, 1, data);
 end
 
-function [pp, ff] = chooseColor(P, freqs)
-    [pp, ff] = findpeaks(P, freqs, 'SortStr', 'descend');
+function C = chooseColor(P, ff)
+    [pp, f] = findpeaks(P, ff, 'SortStr', 'descend');
     
-    R = 0;
-    G = 0;
-    B = 0;
+    C = ones(1,3);
+    weightedAmp = 0;
+    avg_freq = 0;
+    for i=1:3
+        if i < length(f)
+            text(f(i) + 0.2, pp(i)+0.04, num2str(f(i)));
+            
+            hold on
+            plot(f(i), pp(i), 'rv')
+            hold off
+            
+            weightedAmp = weightedAmp + pp(i)/i;
+            avg_freq = avg_freq + ff(i);
+        end
+    end
+    
+    weightedAmp = weightedAmp;
+    avg_freq = avg_freq / 3;
+    
+    avg_freq
+    weightedAmp
+end
+
+function cc = updateParams(handles)
+    axes(handles.axes1);
+    cla;
+
+    %XXX = rand(1, 10*200 + 1);
+
+    [xx, tt] = generateSignal(handles);
+
+    plot(tt, avg_filter(xx), 'red')
+    %plot(tt, avg_filter(XXX))
+
+    xlabel('t (sec)')
+    ylabel('Amplitude (Volts)')
+    title('Sinusoidal Waveform Input V(t)')
+
+    axes(handles.axes2);
+    cla;
+
+    [P, f] = transform(avg_filter(xx), 1000);
+    %[P, f] = transform(avg_filter(XXX), 200);
+    plot(f, P, 'red')
+    xlabel('f (Hz)')
+    ylabel('Amplitude (Volts)')
+    title('Single-Sided Amplitude Spectrum of V(t)')
+
+    cc = chooseColor(P, f);
 end
 
 % --- Executes just before UserInterface is made visible.
@@ -114,15 +160,20 @@ guidata(hObject, handles);
 if strcmp(get(hObject,'Visible'),'off')
     [xx,tt] = generateSignal(handles);
     axes(handles.axes1);
-    plot(tt, xx)
+    plot(tt, xx, 'red')
     xlabel('t (sec)')
     ylabel('Amplitude (Volts)')
     title('Sinusoidal Waveform Input V(t)')
     
     axes(handles.axes2);
+    plot(tt, xx, 'red')
     xlabel('f (Hz)')
     ylabel('Amplitude (Volts)')
     title('Single-Sided Amplitude Spectrum of V(t)')
+    
+    axes(handles.colorBox);
+    plot(0);
+    title('Color Output');
 end
 
 % UIWAIT makes UserInterface wait for user response (see UIRESUME)
@@ -145,36 +196,11 @@ function btnUpdate_Callback(hObject, eventdata, handles)
 % hObject    handle to btnUpdate (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-axes(handles.axes1);
-cla;
 
-XXX = rand(1, 10*200 + 1);
-
-[xx, tt] = generateSignal(handles);
-tt
-%plot(tt, avg_filter(xx))
-plot(tt, avg_filter(XXX))
-
-xlabel('t (sec)')
-ylabel('Amplitude (Volts)')
-title('Sinusoidal Waveform Input V(t)')
-
-axes(handles.axes2);
-cla;
-
-%[P, f] = transform(avg_filter(xx), 200);
-[P, f] = transform(avg_filter(XXX), 200);
-plot(f, P)
-xlabel('f (Hz)')
-ylabel('Amplitude (Volts)')
-title('Single-Sided Amplitude Spectrum of V(t)')
-
-[ps, fs] = chooseColor(P, f);
-for i=1:3
-    text(fs(i) + 0.2, ps(i), num2str(fs(i)));
-end
-
-
+    cc = updateParams(handles);
+    
+    axes(handles.colorBox);
+    set(handles.colorBox, 'Color', cc);
 end
 
 % --------------------------------------------------------------------
@@ -421,4 +447,18 @@ function editFreq3_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
+end
+
+
+% --- Executes on button press in btnArduino.
+function btnArduino_Callback(hObject, eventdata, handles)
+% hObject    handle to btnArduino (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+    
+    % Setup the arduino
+    a = arduino('COM11', 'Uno', 'Libraries', 'Adafruit/NeoPixel');
+    lights = addon(a, 'Adafruit/NeoPixel', 'D6', 24, 'NeoPixelType', 'RGB');
+    
+    cc = updateParams(handles);
 end
