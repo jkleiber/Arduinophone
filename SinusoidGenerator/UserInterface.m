@@ -22,7 +22,7 @@ function varargout = UserInterface(varargin)
 
 % Edit the above text to modify the response to help UserInterface
 
-% Last Modified by GUIDE v2.5 17-Nov-2017 22:41:42
+% Last Modified by GUIDE v2.5 20-Nov-2017 09:32:42
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -71,14 +71,24 @@ function [xx, tt] = generateSignal(handles)
 end
 
 function [P, f] = transform(data, fsamp)
+%     signal = detrend(data, 0);
+%     len = length(signal);
+%     
+%     nfft = 2^nextpow2(len);
+%     f = (fsamp/2) * linspace(0,1,nfft/2+1);
+%     
+%     P1 = abs(fft(signal, nfft))/len;
+%     P = 2 * abs(P1(1:nfft/2+1)); %Return single-sided spectrum
     signal = detrend(data, 0);
     len = length(signal);
+    Y = fft(signal);
     
-    nfft = 2^nextpow2(len);
-    f = (fsamp/2) * linspace(0,1,nfft/2+1);
+    P2 = abs(Y/len);
+    P1 = P2(1:floor(len/2)+1);
+    P1(2:end-1) = 2*P1(2:end-1);
     
-    P1 = abs(fft(signal, nfft))/len;
-    P = 2 * abs(P1(1:nfft/2+1)); %Return single-sided spectrum
+    f = fsamp*(0:(len/2))/len;
+    P = P1;
 end
 
 function V = avg_filter(data)
@@ -94,7 +104,7 @@ function C = chooseColor(P, ff, fsamp)
     topFreq = 0;
     topAmp = 0;
     for i=1:3
-        if i < length(f)
+        if i <= length(f)
             text(f(i) + 0.2, pp(i), num2str(f(i)));
             
             hold on
@@ -116,7 +126,7 @@ function C = chooseColor(P, ff, fsamp)
     
     COLORS = [R; O; Y; G; B; I; V];
     
-    stepSize = (fsamp*1/(2*7))
+    stepSize = (fsamp*1/(2*7));
     topFreq
     
     for i=1:7
@@ -475,20 +485,23 @@ function btnArduino_Callback(hObject, eventdata, handles)
     button_state = get(hObject,'Value');
     if button_state == get(hObject,'Max')
         % Setup the arduino
-        a = arduino('COM11', 'Uno', 'Libraries', 'Adafruit/NeoPixel');
-        lights = addon(a, 'Adafruit/NeoPixel', 'D6', 24, 'NeoPixelType', 'RGB');
+        %a = arduino('COM11', 'Uno', 'Libraries', 'Adafruit/NeoPixel');
+        %lights = addon(a, 'Adafruit/NeoPixel', 'D6', 24, 'NeoPixelType', 'RGB');
     
         set(hObject, 'String', "Stop Arduino Output");
+        set(hObject, 'BackgroundColor', [1 0 0]);
         
         while true
             cc = updateParams(handles);
-            writeColor(lights, 1:24, cc);
+            %writeColor(lights, 1:24, cc);
+            set(handles.colorBox, 'Color', cc);
             
             pause(0.5);
             
             button_state = get(hObject,'Value');
             if button_state == get(hObject,'Min')
                 set(hObject, 'String', "Run on Arduino");
+                set(hObject, 'BackgroundColor', [0.47 0.67 0.19]);
                 clear a
                 break;
             end
@@ -496,16 +509,5 @@ function btnArduino_Callback(hObject, eventdata, handles)
     elseif button_state == get(hObject,'Min')
         clear a
     end
-
-end
-
-
-% --- If Enable == 'on', executes on mouse press in 5 pixel border.
-% --- Otherwise, executes on mouse press in 5 pixel border or over btnArduino.
-function btnArduino_ButtonDownFcn(hObject, eventdata, handles)
-% hObject    handle to btnArduino (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 
 end

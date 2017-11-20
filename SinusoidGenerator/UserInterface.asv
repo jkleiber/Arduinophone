@@ -22,7 +22,7 @@ function varargout = UserInterface(varargin)
 
 % Edit the above text to modify the response to help UserInterface
 
-% Last Modified by GUIDE v2.5 17-Nov-2017 22:41:42
+% Last Modified by GUIDE v2.5 20-Nov-2017 09:32:42
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -53,7 +53,7 @@ function d = deNaN(num)
 end
 
 function [xx, tt] = generateSignal(handles)
-    tt = 0:0.001:10;
+    tt = 0:0.001:1;
 
     A1 = deNaN(str2double(get(handles.editAmp1, 'String')));
     P1 = deNaN(str2double(get(handles.editPhs1, 'String')));
@@ -71,14 +71,15 @@ function [xx, tt] = generateSignal(handles)
 end
 
 function [P, f] = transform(data, fsamp)
-    signal = detrend(data, 0);
-    len = length(signal);
+%     signal = detrend(data, 0);
+%     len = length(signal);
+%     
+%     nfft = 2^nextpow2(len);
+%     f = (fsamp/2) * linspace(0,1,nfft/2+1);
+%     
+%     P1 = abs(fft(signal, nfft))/len;
+%     P = 2 * abs(P1(1:nfft/2+1)); %Return single-sided spectrum
     
-    nfft = 2^nextpow2(len);
-    f = (fsamp/2) * linspace(0,1,nfft/2+1);
-    
-    P1 = abs(fft(signal, nfft))/len;
-    P = 2 * abs(P1(1:nfft/2+1)); %Return single-sided spectrum
 end
 
 function V = avg_filter(data)
@@ -106,17 +107,17 @@ function C = chooseColor(P, ff, fsamp)
         end
     end
     
-    R = [0.9, 0.25, 0.25];
-    O = [0.9, 0.66, 0.25];
-    Y = [0.9, 0.9, 0.25];
-    G = [0.25, 0.9, 0.25];
+    R = [0.9, 0.1, 0.1];
+    O = [0.9, 0.5, 0.1];
+    Y = [0.9, 0.9, 0];
+    G = [0.1, 0.9, 0.1];
     B = [0.25, 0.25, 0.9];
-    I = [0.66, 0.25, 0.9];
-    V = [0.9, 0.25, 0.9];
+    I = [0.5, 0.1, 0.9];
+    V = [0.9, 0.1, 0.9];
     
     COLORS = [R; O; Y; G; B; I; V];
     
-    stepSize = (fsamp*1/(2*7))
+    stepSize = (fsamp*1/(2*7));
     topFreq
     
     for i=1:7
@@ -137,7 +138,8 @@ function cc = updateParams(handles)
 
     [xx, tt] = generateSignal(handles);
 
-    plot(tt, avg_filter(xx), 'red')
+    plot(tt, xx, 'red')
+    %plot(tt, avg_filter(xx), 'red')
     %plot(tt, avg_filter(XXX))
 
     xlabel('t (sec)')
@@ -147,7 +149,7 @@ function cc = updateParams(handles)
     axes(handles.axes2);
     cla;
 
-    [P, f] = transform(avg_filter(xx), fsamp);
+    [P, f] = transform(xx, fsamp);
     %[P, f] = transform(avg_filter(XXX), 200);
     plot(f, P, 'red')
     xlabel('f (Hz)')
@@ -474,27 +476,29 @@ function btnArduino_Callback(hObject, eventdata, handles)
     button_state = get(hObject,'Value');
     if button_state == get(hObject,'Max')
         % Setup the arduino
-        a = arduino('COM11', 'Uno', 'Libraries', 'Adafruit/NeoPixel');
-        lights = addon(a, 'Adafruit/NeoPixel', 'D6', 24, 'NeoPixelType', 'RGB');
+        %a = arduino('COM11', 'Uno', 'Libraries', 'Adafruit/NeoPixel');
+        %lights = addon(a, 'Adafruit/NeoPixel', 'D6', 24, 'NeoPixelType', 'RGB');
     
-        cc = updateParams(handles);
+        set(hObject, 'String', "Stop Arduino Output");
+        set(hObject, 'BackgroundColor', [1 0 0]);
+        
         while true
-            writeColor(lights, 1:24, cc);
+            cc = updateParams(handles);
+            %writeColor(lights, 1:24, cc);
+            set(handles.colorBox, 'Color', cc);
+            
+            pause(0.5);
+            
             button_state = get(hObject,'Value');
+            if button_state == get(hObject,'Min')
+                set(hObject, 'String', "Run on Arduino");
+                set(hObject, 'BackgroundColor', [0.47 0.67 0.19]);
+                clear a
+                break;
+            end
         end
     elseif button_state == get(hObject,'Min')
         clear a
     end
-
-end
-
-
-% --- If Enable == 'on', executes on mouse press in 5 pixel border.
-% --- Otherwise, executes on mouse press in 5 pixel border or over btnArduino.
-function btnArduino_ButtonDownFcn(hObject, eventdata, handles)
-% hObject    handle to btnArduino (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 
 end
