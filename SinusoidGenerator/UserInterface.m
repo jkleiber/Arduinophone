@@ -22,7 +22,7 @@ function varargout = UserInterface(varargin)
 
 % Edit the above text to modify the response to help UserInterface
 
-% Last Modified by GUIDE v2.5 20-Nov-2017 09:32:42
+% Last Modified by GUIDE v2.5 21-Nov-2017 17:02:55
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -158,7 +158,7 @@ function cc = updateParams(handles)
     axes(handles.axes2);
     cla;
 
-    [P, f] = transform(xx, fsamp);
+    [P, f] = transform(xx(1:100), fsamp);
     %[P, f] = transform(avg_filter(XXX), 200);
     plot(f, P, 'red')
     xlabel('f (Hz)')
@@ -485,15 +485,15 @@ function btnArduino_Callback(hObject, eventdata, handles)
     button_state = get(hObject,'Value');
     if button_state == get(hObject,'Max')
         % Setup the arduino
-        %a = arduino('COM11', 'Uno', 'Libraries', 'Adafruit/NeoPixel');
-        %lights = addon(a, 'Adafruit/NeoPixel', 'D6', 24, 'NeoPixelType', 'RGB');
+        a = arduino('COM11', 'Uno', 'Libraries', 'Adafruit/NeoPixel');
+        lights = addon(a, 'Adafruit/NeoPixel', 'D6', 24, 'NeoPixelType', 'RGB');
     
         set(hObject, 'String', "Stop Arduino Output");
         set(hObject, 'BackgroundColor', [1 0 0]);
         
         while true
             cc = updateParams(handles);
-            %writeColor(lights, 1:24, cc);
+            writeColor(lights, 1:24, cc);
             set(handles.colorBox, 'Color', cc);
             
             pause(0.5);
