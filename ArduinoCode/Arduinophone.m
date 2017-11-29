@@ -218,6 +218,15 @@ function C = chooseColor(P, ff, fsamp)
         end
     end
     
+    scale = 1; %Create variable to adjust brightness
+    if topAmp <= 1 %Reduce brightness if input signal is very quiet
+        scale = 0.5; %cut brightness to 1/2
+    elseif topAmp <= 2 %Reduce brightness less if it is a bit louder
+        scale = 0.667; %cut brightness to 2/3
+    elseif topAmp <= 3 %Almost loud enough to not be cut
+        scale = 0.75; %Reduce brightness to 3/4
+    end
+    
     R = [0.9, 0.1, 0.1]; %Red
     O = [0.9, 0.5, 0.1]; %Orange
     Y = [0.9, 0.9, 0]; %Yellow
@@ -226,12 +235,13 @@ function C = chooseColor(P, ff, fsamp)
     I = [0.5, 0.1, 0.9]; %Indigo
     V = [0.9, 0.1, 0.9]; %Violet
     
-    %Colors form a lookup table
-    COLORS = [R; O; Y; G; B; I; V];
+    %Colors form a lookup table. Make sure to scale the output accordingly
+    %using vector multiplication
+    COLORS = scale * [R; O; Y; G; B; I; V];
     
     %The size of each region in the table should be determined by the
     %usable frequency region
-    stepSize = ((fsamp-100)*1/(2*7));
+    stepSize = ((fsamp/2) - 100)*7;
     
     %Go through the values until we find the correct region
     for i=1:7

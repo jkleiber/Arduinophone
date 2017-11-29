@@ -22,7 +22,7 @@ function varargout = UserInterface(varargin)
 
 % Edit the above text to modify the response to help UserInterface
 
-% Last Modified by GUIDE v2.5 21-Nov-2017 17:02:55
+% Last Modified by GUIDE v2.5 29-Nov-2017 09:49:05
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -172,6 +172,15 @@ function C = chooseColor(P, ff, fsamp)
         end
     end
     
+    scale = 1; %Create variable to adjust brightness
+    if topAmp <= 1 %Reduce brightness if input signal is very quiet
+        scale = 0.5; %cut brightness to 1/2
+    elseif topAmp <= 2 %Reduce brightness less if it is a bit louder
+        scale = 0.667; %cut brightness to 2/3
+    elseif topAmp <= 3 %Almost loud enough to not be cut
+        scale = 0.75; %Reduce brightness to 3/4
+    end
+    
     R = [0.9, 0.1, 0.1]; %Red
     O = [0.9, 0.5, 0.1]; %Orange
     Y = [0.9, 0.9, 0]; %Yellow
@@ -180,12 +189,13 @@ function C = chooseColor(P, ff, fsamp)
     I = [0.5, 0.1, 0.9]; %Indigo
     V = [0.9, 0.1, 0.9]; %Violet
     
-    %Colors form a lookup table
-    COLORS = [R; O; Y; G; B; I; V];
+    %Colors form a lookup table. Make sure to scale the output accordingly
+    %using vector multiplication
+    COLORS = scale * [R; O; Y; G; B; I; V];
     
     %The size of each region in the table should be determined by the
     %usable frequency region
-    stepSize = ((fsamp-100)*1/(2*7));
+    stepSize = ((fsamp/2) - 100)*7;
     
     %Go through the values until we find the correct region
     for i=1:7
@@ -298,45 +308,45 @@ function btnUpdate_Callback(hObject, eventdata, handles)
     set(handles.colorBox, 'Color', cc);%Set the color accordingly
 end
 
-% --- Executes on button press in btnArduino.
-function btnArduino_Callback(hObject, eventdata, handles)
-% hObject    handle to btnArduino (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-    button_state = get(hObject,'Value');
-    if button_state == get(hObject,'Max')
-        % Setup the arduino
-        a = arduino('COM11', 'Uno', 'Libraries', 'Adafruit/NeoPixel');
-        
-        %Setup the light strip. We have 24 RGB lights
-        lights = addon(a, 'Adafruit/NeoPixel', 'D6', 24, 'NeoPixelType', 'RGB');
-    
-        %Update this button to be a stop button
-        set(hObject, 'String', "Stop Arduino Output");
-        set(hObject, 'BackgroundColor', [1 0 0]); %Background color set to Red
-        
-        %Run this loop until the toggle button is untoggled
-        while true
-            cc = updateParams(handles);%determine the color and update sinsoids in real time
-            writeColor(lights, 1:24, cc); %Write the determined color to the lights
-            set(handles.colorBox, 'Color', cc); %Set the colorBox output
-            
-            pause(0.5);%Wait half a second to see if the button state has changed
-            
-            %Get button status
-            button_state = get(hObject,'Value');
-            if button_state == get(hObject,'Min')%If the button is turned off...
-                set(hObject, 'String', "Run on Arduino");%Reset text
-                set(hObject, 'BackgroundColor', [0.47 0.67 0.19]); %Set color to green
-                clear a %delete arduino
-                break; %Break out of the infinite loop
-            end
-        end
-    elseif button_state == get(hObject,'Min')%If the button is off...
-        clear a %delete arduino reference
-    end
-
-end
+% % --- Executes on button press in btnArduino.
+% function btnArduino_Callback(hObject, eventdata, handles)
+% % hObject    handle to btnArduino (see GCBO)
+% % eventdata  reserved - to be defined in a future version of MATLAB
+% % handles    structure with handles and user data (see GUIDATA)
+%     button_state = get(hObject,'Value');
+%     if button_state == get(hObject,'Max')
+%         % Setup the arduino
+%         a = arduino('COM11', 'Uno', 'Libraries', 'Adafruit/NeoPixel');
+%         
+%         %Setup the light strip. We have 24 RGB lights
+%         lights = addon(a, 'Adafruit/NeoPixel', 'D6', 24, 'NeoPixelType', 'RGB');
+%     
+%         %Update this button to be a stop button
+%         set(hObject, 'String', "Stop Arduino Output");
+%         set(hObject, 'BackgroundColor', [1 0 0]); %Background color set to Red
+%         
+%         %Run this loop until the toggle button is untoggled
+%         while true
+%             cc = updateParams(handles);%determine the color and update sinsoids in real time
+%             writeColor(lights, 1:24, cc); %Write the determined color to the lights
+%             set(handles.colorBox, 'Color', cc); %Set the colorBox output
+%             
+%             pause(0.5);%Wait half a second to see if the button state has changed
+%             
+%             %Get button status
+%             button_state = get(hObject,'Value');
+%             if button_state == get(hObject,'Min')%If the button is turned off...
+%                 set(hObject, 'String', "Run on Arduino");%Reset text
+%                 set(hObject, 'BackgroundColor', [0.47 0.67 0.19]); %Set color to green
+%                 clear a %delete arduino
+%                 break; %Break out of the infinite loop
+%             end
+%         end
+%     elseif button_state == get(hObject,'Min')%If the button is off...
+%         clear a %delete arduino reference
+%     end
+% 
+% end
 
 
 % Everything beyond this point is Auto-generated MATLAB Code for GUIs
@@ -344,7 +354,12 @@ end
 % code was created by that command.
 
 
-
+% --- Executes on button press in btnArduino.
+function btnArduino_Callback(hObject, eventdata, handles)
+% hObject    handle to btnArduino (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+end
 
 % --- Outputs from this function are returned to the command line.
 function varargout = UserInterface_OutputFcn(hObject, eventdata, handles)
