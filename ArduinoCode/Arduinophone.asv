@@ -251,13 +251,11 @@ end
 %3 point averaging filter
 function f = avg_filter(data)
     detrend(data,0); %trend the data to zero to avoid weird offsetting
-    bk = (1/3) * ones(3, 1); %apply the 3 point filter coefficients
-    f = filter(bk, 1, data); %apply the filter
+    bk = (1/3) * ones(3, 1); %
+    f = filter(bk, 1, data);
 end
 
-%Credit to: http://www.sengpielaudio.com/calculator-gainloss.htm
-%for help learning how to convert from voltage to decibels with our
-%microphone.
+%http://www.sengpielaudio.com/calculator-gainloss.htm
 function db = getDecibels(v)
-    db = 20 * log(v); %use the db = 20 * log10(v/v0) v0 = 1 equation to convert
+    db = 20 * log(v); 
 end

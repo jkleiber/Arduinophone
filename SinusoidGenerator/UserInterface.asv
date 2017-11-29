@@ -159,16 +159,11 @@ function C = chooseColor(P, ff, fsamp)
     topAmp = 0; %set top amplitude to default
     
     %loop through the best frequencies
-    for i=1:3
-        if i <= length(f)%Only pay attention to frequencies in the bounds of the array
-            text(f(i) + 0.2, pp(i), num2str(f(i)));
-            
-            hold on %Keep the current plot saved
-            plot(f(i), pp(i), 'rv') %Plot the top frequencies
-            hold off
-            
-            topAmp = pp(1);%Set the top amplitude
-            topFreq = f(1);%Set the top frequency
+    for fs = 1:length(f)
+        if f(fs) > 100 %only consider a frequency greater than 100 Hz (readable)
+            topFreq = f(fs); %set as top frequency
+            topAmp = pp(fs); %Set as top amplitude
+            break; %break out of the loop if acceptable value found
         end
     end
     
@@ -318,22 +313,21 @@ function btnArduino_Callback(hObject, eventdata, handles)
         %Run this loop until the toggle button is untoggled
         while true
             cc = updateParams(handles);%determine the color and update sinsoids in real time
-            writeColor(lights, 1:24, cc); %Write the determined color to the lights
-            set(handles.colorBox, 'Color', cc); %Set the colorBox output
+            writeColor(lights, 1:24, cc); %Write the determined co
+            set(handles.colorBox, 'Color', cc);
             
-            pause(0.5);%Wait half a second to see if the button state has changed
+            pause(0.5);
             
-            %Get button status
             button_state = get(hObject,'Value');
-            if button_state == get(hObject,'Min')%If the button is turned off...
-                set(hObject, 'String', "Run on Arduino");%Reset text
-                set(hObject, 'BackgroundColor', [0.47 0.67 0.19]); %Set color to green
-                clear a %delete arduino
-                break; %Break out of the infinite loop
+            if button_state == get(hObject,'Min')
+                set(hObject, 'String', "Run on Arduino");
+                set(hObject, 'BackgroundColor', [0.47 0.67 0.19]);
+                clear a
+                break;
             end
         end
-    elseif button_state == get(hObject,'Min')%If the button is off...
-        clear a %delete arduino reference
+    elseif button_state == get(hObject,'Min')
+        clear a
     end
 
 end
