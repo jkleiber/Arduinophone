@@ -22,7 +22,7 @@ function varargout = UserInterface(varargin)
 
 % Edit the above text to modify the response to help UserInterface
 
-% Last Modified by GUIDE v2.5 29-Nov-2017 09:49:05
+% Last Modified by GUIDE v2.5 21-Nov-2017 17:02:55
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -44,216 +44,128 @@ end
 % End initialization code - DO NOT EDIT
 end
 
-%Convert NaN to 0
 function d = deNaN(num)
-% Function to remove NaN values and set them to zero
-% num: potential value that could be NaN
-%
-% Returns:
-% d: either the value was not NaN and it is returned, or the value vas NaN,
-% so 0 is returned
-
     if isnan(num)
-        d = 0; %Set to 0 if num = NaN
+        d = 0;
     else
-        d = num; %Set to input value if not NaN
+        d = num;
     end
 end
 
-%Bandstop filter
-function B = bandstop(P, f)
-% This function implements a bandstop filter. Our microphone cannot read
-% frquencies under 100Hz, however the FFT will detect some noise as under
-% 100Hz. Therefore, these values need to be attenuated before output to the
-% lights
-%
-% Arguments:
-%   P: Power spectrum (amplitude)
-%   f: frequency where amplitude occurs
-%
-%Returns:
-%   B: the power spectrum after the bandstop filter has been applied.
-
-    %Set index to 1
-    ii = 1;
-    
-    %While the frequency is less than 100Hz...
-    while f(ii) < 100
-        P(ii) = 0; %set power to 0
-        ii = ii + 1;%increment index
-    end
-    
-    B = P; %Return the new power spectrum
-end
-
-%Create a test signal to make sure our hardware will work
 function [xx, tt] = generateSignal(handles)
-    %Create a time domain signal at 1000 Hz sampling frequency
     tt = 0:0.001:1;
 
-    %Get the first amplitude, frequency and phase
     A1 = deNaN(str2double(get(handles.editAmp1, 'String')));
     P1 = deNaN(str2double(get(handles.editPhs1, 'String')));
     F1 = deNaN(str2double(get(handles.editFreq1, 'String')));
     
-    %Get the second amplitude, frequency and phase
     A2 = deNaN(str2double(get(handles.editAmp2, 'String')));
     P2 = deNaN(str2double(get(handles.editPhs2, 'String')));
     F2 = deNaN(str2double(get(handles.editFreq2, 'String')));
     
-    %Get the third amplitude, frequency and phase
     A3 = deNaN(str2double(get(handles.editAmp3, 'String')));
     P3 = deNaN(str2double(get(handles.editPhs3, 'String')));
     F3 = deNaN(str2double(get(handles.editFreq3, 'String')));
     
-    %Construct a sinusoid from the three component sinusoids
     xx = A1*cos(2*pi*F1*tt + P1) + A2*cos(2*pi*F2*tt + P2) + A3*cos(2*pi*F3*tt + P3);
 end
 
-%Fast Fourier Transform:
-%Credit to: https://www.mathworks.com/help/matlab/ref/fft.html
-%for teaching us how to do this
 function [P, f] = transform(data, fsamp)
-%This function finds the frequency domain representation of an input signal
-%and returns a single sided spectrum analysis. This will be used by the
-%LEDs to choose the color
-%
-%Arguments:
-%   data: the decibel inputs
-%   fsamp: the sampling frequency
-%
-%Returns:
-%   P: amplitudes of all signals
-%   f: frequencies where the amplitudes occur
-
-    signal = detrend(data, 0);%Remove trending from the signal (set the middle value to 0)
-    len = length(signal); %Get signal length
-    Y = fft(signal); %Perform the fast fourier transform
+%     signal = detrend(data, 0);
+%     len = length(signal);
+%     
+%     nfft = 2^nextpow2(len);
+%     f = (fsamp/2) * linspace(0,1,nfft/2+1);
+%     
+%     P1 = abs(fft(signal, nfft))/len;
+%     P = 2 * abs(P1(1:nfft/2+1)); %Return single-sided spectrum
+    signal = detrend(data, 0);
+    len = length(signal);
+    Y = fft(signal);
     
-    P2 = abs(Y/len); %Get the magnitude of the fourier transform
-    P1 = P2(1:floor(len/2)+1); %Set the negative side to be the positive side
-    P1(2:end-1) = 2*P1(2:end-1); %Double amplitude to merge values to single side
+    P2 = abs(Y/len);
+    P1 = P2(1:floor(len/2)+1);
+    P1(2:end-1) = 2*P1(2:end-1);
     
-    f = fsamp*(0:(len/2))/len; %Find the possible frequencies for the FFT
-    P = bandstop(P1, f); %Apply a bandstop filter to clear the incorrect frequencies
+    f = fsamp*(0:(len/2))/len;
+    P = P1;
 end
 
-%3 point averaging filter
-function f = avg_filter(data)
-    detrend(data,0); %trend the data to zero to avoid weird offsetting
-    bk = (1/3) * ones(3, 1); %apply the 3 point filter coefficients
-    f = filter(bk, 1, data); %apply the filter
+function V = avg_filter(data)
+    detrend(data,0);
+    bk = (1/3) * ones(3, 1);
+    V = filter(bk, 1, data);
 end
 
-%Chooses the color of the LED output
 function C = chooseColor(P, ff, fsamp)
-%This function takes the single sided spectrum as input, and returns the
-%correct color for the lights to output to
-
-    %Find the top frequencies that the signal produces
     [pp, f] = findpeaks(P, ff, 'SortStr', 'descend');
     
-    %Set the RGB to [1 1 1], or black (off)
     C = ones(1,3);
-    topFreq = 0; %set top frequency to default
-    topAmp = 0; %set top amplitude to default
-    
-    %loop through the best frequencies
+    topFreq = 0;
+    topAmp = 0;
     for i=1:3
-        if i <= length(f)%Only pay attention to frequencies in the bounds of the array
+        if i <= length(f)
             text(f(i) + 0.2, pp(i), num2str(f(i)));
             
-            hold on %Keep the current plot saved
-            plot(f(i), pp(i), 'rv') %Plot the top frequencies
+            hold on
+            plot(f(i), pp(i), 'rv')
             hold off
             
-            topAmp = pp(1);%Set the top amplitude
-            topFreq = f(1);%Set the top frequency
+            topAmp = pp(1);
+            topFreq = f(1);
         end
     end
     
-    scale = 1; %Create variable to adjust brightness
-    if topAmp <= 1 %Reduce brightness if input signal is very quiet
-        scale = 0.5; %cut brightness to 1/2
-    elseif topAmp <= 2 %Reduce brightness less if it is a bit louder
-        scale = 0.667; %cut brightness to 2/3
-    elseif topAmp <= 3 %Almost loud enough to not be cut
-        scale = 0.75; %Reduce brightness to 3/4
-    end
+    R = [0.9, 0.1, 0.1];
+    O = [0.9, 0.5, 0.1];
+    Y = [0.9, 0.9, 0];
+    G = [0.1, 0.9, 0.1];
+    B = [0.25, 0.25, 0.9];
+    I = [0.5, 0.1, 0.9];
+    V = [0.9, 0.1, 0.9];
     
-    R = [0.9, 0.1, 0.1]; %Red
-    O = [0.9, 0.5, 0.1]; %Orange
-    Y = [0.9, 0.9, 0]; %Yellow
-    G = [0.1, 0.9, 0.1]; %Green
-    B = [0.25, 0.25, 0.9]; %Blue
-    I = [0.5, 0.1, 0.9]; %Indigo
-    V = [0.9, 0.1, 0.9]; %Violet
+    COLORS = [R; O; Y; G; B; I; V];
     
-    %Colors form a lookup table. Make sure to scale the output accordingly
-    %using vector multiplication
-    COLORS = scale * [R; O; Y; G; B; I; V];
+    stepSize = (fsamp*1/(2*7));
+    topFreq
     
-    %The size of each region in the table should be determined by the
-    %usable frequency region
-    stepSize = ((fsamp/2) - 100)*7;
-    
-    %Go through the values until we find the correct region
     for i=1:7
-       if topFreq < stepSize*i %if we are in the right region
-           C = COLORS(i, :);%set C to the corresponding color
-           break; %break the loop
+       if topFreq < (fsamp*i/(2*7))
+           C = COLORS(i, :);
+           break;
        end
-    end
-    
-    %Disregard all amplitudes less than 0.1 (background noise)
-    if topAmp < 0.1
-        C = [0, 0, 0]; %Color will be OFF
     end
 
 end
 
-%Updates the Sinusoid, frequency spectrum and color output
 function cc = updateParams(handles)
-%Updates the GUI, while also selecting the output color and doing all the
-%required transforms, filters and plotting
-%
-%Arguments:
-%   handles: the GUI controls
-%Returns:
-%   cc: color output
-
-    %Set axes1 as the active plot
     axes(handles.axes1);
-    cla; %Clear the plot
+    cla;
 
-    %Set sampling frequency to 1000Hz
     fsamp = 1000;
+    %XXX = rand(1, 10*200 + 1);
 
-    %Get generated signal from the given inputs
     [xx, tt] = generateSignal(handles);
 
-    %Plot the input signal in red on the axes1 plot
     plot(tt, xx, 'red')
+    %plot(tt, avg_filter(xx), 'red')
+    %plot(tt, avg_filter(XXX))
 
-    xlabel('t (sec)') %Set X axis to time
-    ylabel('Amplitude (Volts)') %Set the amplitude to volts
-    title('Sinusoidal Waveform Input V(t)') %Set the title
+    xlabel('t (sec)')
+    ylabel('Amplitude (Volts)')
+    title('Sinusoidal Waveform Input V(t)')
 
-    %Set the active plot to axes2
     axes(handles.axes2);
-    cla;%Clear the plot
+    cla;
 
-    [P, f] = transform(xx(1:100), fsamp); %perform the Fast Fourier Transform
-    
-    %Plot the single sided spectrum
+    [P, f] = transform(xx(1:100), fsamp);
+    %[P, f] = transform(avg_filter(XXX), 200);
     plot(f, P, 'red')
-    
-    
-    xlabel('f (Hz)')%Set the X axis to frequency
-    ylabel('Amplitude (Volts)')%Set the Y axis to Volts
-    title('Single-Sided Amplitude Spectrum of V(t)')%Set the title
+    xlabel('f (Hz)')
+    ylabel('Amplitude (Volts)')
+    title('Single-Sided Amplitude Spectrum of V(t)')
 
-    cc = chooseColor(P, f, fsamp);%Find the color output using the chooseColor function
+    cc = chooseColor(P, f, fsamp);
 end
 
 % --- Executes just before UserInterface is made visible.
@@ -273,92 +185,26 @@ guidata(hObject, handles);
 % This sets up the initial plot - only do when we are invisible
 % so window can get raised using UserInterface.
 if strcmp(get(hObject,'Visible'),'off')
-    [xx,tt] = generateSignal(handles); %generate the 0 signal to start
-    axes(handles.axes1); %Set the axes1 to active
-    plot(tt, xx, 'red')%plot the flat line in red
-    xlabel('t (sec)')%Set X label
-    ylabel('Amplitude (Volts)')%Set Y label
-    title('Sinusoidal Waveform Input V(t)')%Set title label
+    [xx,tt] = generateSignal(handles);
+    axes(handles.axes1);
+    plot(tt, xx, 'red')
+    xlabel('t (sec)')
+    ylabel('Amplitude (Volts)')
+    title('Sinusoidal Waveform Input V(t)')
     
-    axes(handles.axes2); %Set the axes2 plot to active
-    plot(tt, xx, 'red')%Plot the nothing plot in red
-    xlabel('f (Hz)')%Frequency on X
-    ylabel('Amplitude (Volts)')%Amplitude on Y
-    title('Single-Sided Amplitude Spectrum of V(t)')%Set title
+    axes(handles.axes2);
+    plot(tt, xx, 'red')
+    xlabel('f (Hz)')
+    ylabel('Amplitude (Volts)')
+    title('Single-Sided Amplitude Spectrum of V(t)')
     
-    axes(handles.colorBox);%Show colorbox as active
-    plot(0);%Plot nothing
-    title('Color Output');%Set the title
+    axes(handles.colorBox);
+    plot(0);
+    title('Color Output');
 end
 
 % UIWAIT makes UserInterface wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
-end
-
-% --- Executes on button press in btnUpdate.
-function btnUpdate_Callback(hObject, eventdata, handles)
-% hObject    handle to btnUpdate (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-    %Set the colors by calling updateParams
-    cc = updateParams(handles);
-
-    %Set the active axes to colorBox
-    axes(handles.colorBox);
-    set(handles.colorBox, 'Color', cc);%Set the color accordingly
-end
-
-% % --- Executes on button press in btnArduino.
-% function btnArduino_Callback(hObject, eventdata, handles)
-% % hObject    handle to btnArduino (see GCBO)
-% % eventdata  reserved - to be defined in a future version of MATLAB
-% % handles    structure with handles and user data (see GUIDATA)
-%     button_state = get(hObject,'Value');
-%     if button_state == get(hObject,'Max')
-%         % Setup the arduino
-%         a = arduino('COM11', 'Uno', 'Libraries', 'Adafruit/NeoPixel');
-%         
-%         %Setup the light strip. We have 24 RGB lights
-%         lights = addon(a, 'Adafruit/NeoPixel', 'D6', 24, 'NeoPixelType', 'RGB');
-%     
-%         %Update this button to be a stop button
-%         set(hObject, 'String', "Stop Arduino Output");
-%         set(hObject, 'BackgroundColor', [1 0 0]); %Background color set to Red
-%         
-%         %Run this loop until the toggle button is untoggled
-%         while true
-%             cc = updateParams(handles);%determine the color and update sinsoids in real time
-%             writeColor(lights, 1:24, cc); %Write the determined color to the lights
-%             set(handles.colorBox, 'Color', cc); %Set the colorBox output
-%             
-%             pause(0.5);%Wait half a second to see if the button state has changed
-%             
-%             %Get button status
-%             button_state = get(hObject,'Value');
-%             if button_state == get(hObject,'Min')%If the button is turned off...
-%                 set(hObject, 'String', "Run on Arduino");%Reset text
-%                 set(hObject, 'BackgroundColor', [0.47 0.67 0.19]); %Set color to green
-%                 clear a %delete arduino
-%                 break; %Break out of the infinite loop
-%             end
-%         end
-%     elseif button_state == get(hObject,'Min')%If the button is off...
-%         clear a %delete arduino reference
-%     end
-% 
-% end
-
-
-% Everything beyond this point is Auto-generated MATLAB Code for GUIs
-% We used the 'guide' command to create this User Interface, and all of this
-% code was created by that command.
-
-
-% --- Executes on button press in btnArduino.
-function btnArduino_Callback(hObject, eventdata, handles)
-% hObject    handle to btnArduino (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 end
 
 % --- Outputs from this function are returned to the command line.
@@ -370,6 +216,18 @@ function varargout = UserInterface_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 varargout{1} = handles.output;
+end
+
+% --- Executes on button press in btnUpdate.
+function btnUpdate_Callback(hObject, eventdata, handles)
+% hObject    handle to btnUpdate (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+    
+    cc = updateParams(handles);
+
+    axes(handles.colorBox);
+    set(handles.colorBox, 'Color', cc);
 end
 
 % --------------------------------------------------------------------
@@ -616,4 +474,40 @@ function editFreq3_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
+end
+
+
+% --- Executes on button press in btnArduino.
+function btnArduino_Callback(hObject, eventdata, handles)
+% hObject    handle to btnArduino (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+    button_state = get(hObject,'Value');
+    if button_state == get(hObject,'Max')
+        % Setup the arduino
+        a = arduino('COM11', 'Uno', 'Libraries', 'Adafruit/NeoPixel');
+        lights = addon(a, 'Adafruit/NeoPixel', 'D6', 24, 'NeoPixelType', 'RGB');
+    
+        set(hObject, 'String', "Stop Arduino Output");
+        set(hObject, 'BackgroundColor', [1 0 0]);
+        
+        while true
+            cc = updateParams(handles);
+            writeColor(lights, 1:24, cc);
+            set(handles.colorBox, 'Color', cc);
+            
+            pause(0.5);
+            
+            button_state = get(hObject,'Value');
+            if button_state == get(hObject,'Min')
+                set(hObject, 'String', "Run on Arduino");
+                set(hObject, 'BackgroundColor', [0.47 0.67 0.19]);
+                clear a
+                break;
+            end
+        end
+    elseif button_state == get(hObject,'Min')
+        clear a
+    end
+
 end
